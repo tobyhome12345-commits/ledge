@@ -16,6 +16,8 @@ const THEMES = {
     plank: '#c99152', plankLight: '#e8b877', plankDark: '#7d5029',
     spike: '#e7ebf2', spikeShade: '#a9b2c3', spikeBase: '#59606e',
     cave: '#4f3421', caveDark: '#3e281a',
+    mover: '#7d8aa8', moverLight: '#b4c0da', moverDark: '#4c566f',
+    track: 'rgba(40, 60, 90, 0.22)',
   },
 
   dusk: {
@@ -31,5 +33,7 @@ const THEMES = {
     plank: '#b07a4f', plankLight: '#d9a273', plankDark: '#6e4529',
     spike: '#f1e6f0', spikeShade: '#b9a5bd', spikeBase: '#4d3d57',
     cave: '#3d2b3a', caveDark: '#2f2130',
+    mover: '#a58fb5', moverLight: '#d3c0de', moverDark: '#66527a',
+    track: 'rgba(40, 20, 60, 0.28)',
   },
 };

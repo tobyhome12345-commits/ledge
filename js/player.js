@@ -25,9 +25,12 @@ class Player {
     this.vy = 0;
     this.facing = 1;          // 1 = right, -1 = left
     this.grounded = false;
+    this.groundType = null;   // what we're standing on: 'solid' | 'oneway' | 'platform'
+    this.platform = null;     // the moving platform we're riding, if any
     this.coyoteTimer = 0;     // > 0: a ground jump is still allowed
     this.jumpBufferTimer = 0; // > 0: a jump was requested recently
     this.jumpCuttable = false; // true while rising from a jump (releasing jump shortens it)
+    this.dropTimer = 0;       // > 0: deliberately falling through one-way platforms
   }
 
   update(dt, input, world) {
@@ -38,6 +41,7 @@ class Player {
 
     this.coyoteTimer -= dt;
     this.jumpBufferTimer -= dt;
+    this.dropTimer -= dt;
 
     // --- Input
     const move = (input.held('right') ? 1 : 0) - (input.held('left') ? 1 : 0);
@@ -54,9 +58,14 @@ class Player {
     if (move !== 0) this.facing = move;
 
     // --- Jump: standing on the ground keeps coyote time topped up, and a
-    // buffered press fires as soon as a jump is allowed.
+    // buffered press fires as soon as a jump is allowed. Down + jump on a
+    // one-way platform drops through it instead.
     if (this.grounded) this.coyoteTimer = c.coyoteTime;
-    if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0) this.jump();
+    if (this.jumpBufferTimer > 0 && this.grounded && input.held('down') && this.groundType !== 'solid') {
+      this.dropThrough();
+    } else if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0) {
+      this.jump();
+    }
 
     // --- Gravity
     let g = c.gravity;
@@ -70,24 +79,67 @@ class Player {
     this.vy = Math.min(this.vy + g * dt, c.maxFallSpeed);
     const dy = ((vyStart + this.vy) / 2) * dt;
 
+    // --- Ride the moving platform we're standing on (it already moved this step)
+    const prevBottom = this.y + this.h;
+    if (this.platform) {
+      Physics.moveX(this, this.platform.dx, level);
+      Physics.moveY(this, this.platform.dy, level, true);
+    }
+
     // --- Collide: X first, then Y
+    const dropping = this.dropTimer > 0;
     if (dy < 0) this.cornerCorrect(level, dy);
     if (Physics.moveX(this, this.vx * dt, level)) this.vx = 0;
-    const hit = Physics.moveY(this, dy, level);
+    const hit = Physics.moveY(this, dy, level, dropping);
     if (hit.bumped) this.vy = 0;
-    if (hit.landed) {
+
+    // Moving platforms work like one-way tiles: land on them only if our feet
+    // were above their top at the start of this step.
+    let platform = null;
+    if (!hit.landed && this.vy >= 0 && !dropping) {
+      for (const p of world.platforms) {
+        if (this.x + this.w > p.x && this.x < p.x + p.w &&
+            prevBottom <= p.py + 1 && this.y + this.h >= p.y) {
+          this.y = p.y - this.h;
+          platform = p;
+          break;
+        }
+      }
+    }
+
+    const landed = hit.landed || platform !== null;
+    if (landed) {
       this.vy = 0;
       this.jumpCuttable = false;
     }
-    this.grounded = hit.landed;
+    // Walking off a moving platform keeps its momentum instead of stopping dead.
+    if (this.platform && !platform) this.vx += this.platform.vx;
+    this.platform = platform;
+    this.grounded = landed;
+    this.groundType = platform ? 'platform' : hit.ground;
   }
 
   jump() {
     this.vy = -CONFIG.player.jumpVelocity;
+    // Jumping off a moving platform adds its velocity (an elevator gives a boost).
+    if (this.platform) {
+      this.vx += this.platform.vx;
+      this.vy += Math.min(0, this.platform.vy);
+    }
+    this.platform = null;
     this.grounded = false;
     this.coyoteTimer = 0;
     this.jumpBufferTimer = 0;
     this.jumpCuttable = true;
+  }
+
+  /** Fall through the one-way platform we're standing on. */
+  dropThrough() {
+    this.dropTimer = 0.1;
+    this.jumpBufferTimer = 0;
+    this.coyoteTimer = 0;
+    this.grounded = false;
+    this.platform = null;
   }
 
   /** If moving up by `dy` would clip a ceiling corner by a few pixels, nudge sideways instead. */

@@ -11,6 +11,7 @@ class World {
     this.camera = new Camera();
     this.time = 0;
     this.start = { x: 2 * T, y: this.level.height - 4 * T }; // overwritten by a 'P' tile
+    this.platforms = (levelData.movers || []).map((def) => new MovingPlatform(def));
 
     // Let every map character with a spawn() create its entity.
     for (const s of this.level.spawns) s.spawn(this, s.tx, s.ty);
@@ -27,6 +28,8 @@ class World {
 
   update(dt, input) {
     this.time += dt;
+    // Platforms move first so riders can be carried by this step's motion.
+    for (const plat of this.platforms) plat.update(dt);
     const p = this.player;
     p.update(dt, input, this);
 
@@ -43,14 +46,18 @@ class World {
 
   /** Draw entities (the renderer has already set the world transform). */
   draw(ctx, alpha) {
+    for (const plat of this.platforms) plat.draw(ctx, alpha, this.theme);
     this.player.draw(ctx, alpha);
   }
 
   /** Debug overlay: hitboxes. */
   drawDebug(ctx, alpha) {
-    const p = this.player;
-    ctx.strokeStyle = '#00ff88';
+    const box = (o, color) => {
+      ctx.strokeStyle = color;
+      ctx.strokeRect(lerp(o.px ?? o.x, o.x, alpha), lerp(o.py ?? o.y, o.y, alpha), o.w, o.h);
+    };
     ctx.lineWidth = 1;
-    ctx.strokeRect(lerp(p.px, p.x, alpha), lerp(p.py, p.y, alpha), p.w, p.h);
+    for (const plat of this.platforms) box(plat, '#3aa0ff');
+    box(this.player, '#00ff88');
   }
 }
