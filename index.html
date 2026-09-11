@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ledge</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='3' width='12' height='12' rx='3' fill='%23ff5a5f'/%3E%3Crect x='8' y='6' width='3' height='4' fill='%23fff'/%3E%3C/svg%3E">
+  <style>
+    html, body { margin: 0; height: 100%; background: #10121c; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center; }
+    canvas { display: block; outline: none; }
+  </style>
+</head>
+<body>
+  <canvas id="game" aria-label="Ledge — a platformer game"></canvas>
+  <noscript>Ledge needs JavaScript to run.</noscript>
+
+  <!--
+    Plain <script> tags (not ES modules) so the game runs by double-clicking
+    index.html — browsers block module scripts on file:// URLs.
+    Order matters: each file may use globals defined by the files above it.
+  -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/themes.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/world.js"></script>
+
+  <!-- Levels: to add one, create levels/levelN.js and add a tag here. -->
+  <script src="levels/levels.js"></script>
+  <script src="levels/level1.js"></script>
+
+  <script src="js/game.js"></script>
+</body>
+</html>

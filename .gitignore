@@ -1,0 +1,8 @@
+# Local editor/tool settings
+.claude/
+.vscode/
+.idea/
+
+# OS clutter
+.DS_Store
+Thumbs.db
