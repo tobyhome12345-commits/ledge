@@ -11,6 +11,21 @@ const CONFIG = {
   STEP: 1 / 60,     // fixed physics timestep (physics always runs at 60 Hz)
   MAX_FRAME: 0.25,  // longest frame we simulate (avoids a "spiral of death" after tab switches)
 
+  player: {
+    width: 22,          // hitbox size (fits through 1-tile gaps)
+    height: 30,
+    maxRunSpeed: 230,
+
+    // Jumps are designed by height and time, and gravity is derived from them,
+    // so you can say "jump 3.5 tiles high, taking 0.38s to peak" directly.
+    jumpHeight: 112,      // px at the peak of a full (held) jump = 3.5 tiles
+    jumpTimeToApex: 0.38, // seconds from take-off to the peak
+    maxFallSpeed: 720,
+
+    get gravity() { return (2 * this.jumpHeight) / this.jumpTimeToApex ** 2; },
+    get jumpVelocity() { return (2 * this.jumpHeight) / this.jumpTimeToApex; },
+  },
+
   camera: {
     followRate: 6,     // horizontal easing speed (higher = snappier)
     followRateY: 5,    // vertical easing speed

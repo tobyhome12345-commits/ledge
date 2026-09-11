@@ -47,15 +47,20 @@ class Game {
   render(alpha) {
     const r = this.renderer;
     r.drawWorld(this.world, alpha, this.time);
-    if (this.debug) r.drawGrid(this.world.level);
+    if (this.debug) {
+      r.drawGrid(this.world.level);
+      r.useWorld();
+      this.world.drawDebug(r.ctx, alpha);
+    }
 
     r.useView();
     const ctx = r.ctx;
+    const p = this.world.player;
     ctx.font = '600 14px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(8, 8, 330, 26);
+    ctx.fillRect(8, 8, 420, 26);
     ctx.fillStyle = '#fff';
-    ctx.fillText('Step 1 - arrows/WASD fly the camera, ` toggles grid', 16, 26);
+    ctx.fillText(`Step 2 - move/jump   x:${p.x.toFixed(0)} y:${p.y.toFixed(0)} vy:${p.vy.toFixed(0)} ${p.grounded ? 'grounded' : 'air'}`, 16, 26);
   }
 }
 

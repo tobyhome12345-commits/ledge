@@ -51,7 +51,7 @@ const LEGEND = {
   '^': { tile: TILE.SPIKES },
   ':': { tile: TILE.BACKDROP },
   // Entities (their spawn functions are added as the entity types are built)
-  'P': {},                        // player start
+  'P': { spawn: (world, tx, ty) => world.setPlayerStart(tx, ty) },
   'o': {},                        // coin
   '*': { tile: TILE.BACKDROP },   // coin in front of cave backdrop
   'e': {},                        // walker enemy
