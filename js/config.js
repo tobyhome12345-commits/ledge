@@ -39,8 +39,20 @@ const CONFIG = {
     jumpBufferTime: 0.12,  // a jump pressed this long before landing still happens
     cornerCorrection: 6,   // px we slide around a ceiling corner instead of bonking
 
+    // Combat
+    maxHealth: 3,          // hearts
+    stompBounce: 520,      // upward speed after stomping an enemy (hold jump to bounce higher)
+    hurtKnockbackX: 240,
+    hurtKnockbackY: 300,
+    hurtStunTime: 0.3,     // controls ignored briefly after a hit, so the knockback reads
+    invulnTime: 1.3,       // blinking, can't be hurt again
+
     get gravity() { return (2 * this.jumpHeight) / this.jumpTimeToApex ** 2; },
     get jumpVelocity() { return (2 * this.jumpHeight) / this.jumpTimeToApex; },
+  },
+
+  enemies: {
+    walker: { speed: 55, gravity: 1800, maxFallSpeed: 720 },
   },
 
   camera: {

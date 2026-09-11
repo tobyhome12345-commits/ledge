@@ -60,7 +60,7 @@ class Game {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.fillRect(8, 8, 420, 26);
     ctx.fillStyle = '#fff';
-    ctx.fillText(`Step 3 - x:${p.x.toFixed(0)} y:${p.y.toFixed(0)} vx:${p.vx.toFixed(0)} vy:${p.vy.toFixed(0)} ${p.grounded ? 'grounded' : 'air'}`, 16, 26);
+    ctx.fillText(`Step 4 - hearts:${p.health}  x:${p.x.toFixed(0)} y:${p.y.toFixed(0)} vx:${p.vx.toFixed(0)} vy:${p.vy.toFixed(0)} ${p.grounded ? 'grounded' : 'air'}`, 16, 26);
   }
 }
 

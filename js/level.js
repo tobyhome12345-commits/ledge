@@ -54,7 +54,7 @@ const LEGEND = {
   'P': { spawn: (world, tx, ty) => world.setPlayerStart(tx, ty) },
   'o': {},                        // coin
   '*': { tile: TILE.BACKDROP },   // coin in front of cave backdrop
-  'e': {},                        // walker enemy
+  'e': { spawn: (world, tx, ty) => world.addEnemy(new Walker(tx, ty)) },
   'C': {},                        // checkpoint
   'G': {},                        // goal flag
 };

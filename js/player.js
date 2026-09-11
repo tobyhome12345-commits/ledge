@@ -31,6 +31,20 @@ class Player {
     this.jumpBufferTimer = 0; // > 0: a jump was requested recently
     this.jumpCuttable = false; // true while rising from a jump (releasing jump shortens it)
     this.dropTimer = 0;       // > 0: deliberately falling through one-way platforms
+    this.health = c.maxHealth;
+    this.invulnTimer = 0;     // > 0: recently hurt, can't be hurt again (blinks)
+    this.stunTimer = 0;       // > 0: knocked back, controls ignored
+  }
+
+  /** Put the player back at a spawn point (bottom-centre) in a clean state. */
+  respawn(spawn) {
+    this.x = this.px = spawn.x - this.w / 2;
+    this.y = this.py = spawn.y - this.h;
+    this.vx = this.vy = 0;
+    this.grounded = false;
+    this.platform = null;
+    this.coyoteTimer = this.jumpBufferTimer = this.dropTimer = this.stunTimer = 0;
+    this.jumpCuttable = false;
   }
 
   update(dt, input, world) {
@@ -42,20 +56,25 @@ class Player {
     this.coyoteTimer -= dt;
     this.jumpBufferTimer -= dt;
     this.dropTimer -= dt;
+    this.invulnTimer -= dt;
+    this.stunTimer -= dt;
 
-    // --- Input
-    const move = (input.held('right') ? 1 : 0) - (input.held('left') ? 1 : 0);
-    const jumpHeld = input.held('jump');
-    if (input.pressed('jump')) this.jumpBufferTimer = c.jumpBufferTime;
+    // --- Input (ignored while stunned by a hit)
+    const stunned = this.stunTimer > 0;
+    const move = stunned ? 0 : (input.held('right') ? 1 : 0) - (input.held('left') ? 1 : 0);
+    const jumpHeld = !stunned && input.held('jump');
+    if (!stunned && input.pressed('jump')) this.jumpBufferTimer = c.jumpBufferTime;
 
-    // --- Horizontal: accelerate toward the target speed
-    const target = move * c.maxRunSpeed;
-    const turning = move !== 0 && this.vx * move < 0;
-    let accel;
-    if (this.grounded) accel = move === 0 ? c.groundDecel : turning ? c.turnAccel : c.groundAccel;
-    else accel = move === 0 ? c.airDecel : turning ? c.airTurnAccel : c.airAccel;
-    this.vx = approach(this.vx, target, accel * dt);
-    if (move !== 0) this.facing = move;
+    // --- Horizontal: accelerate toward the target speed (knockback keeps its momentum)
+    if (!stunned) {
+      const target = move * c.maxRunSpeed;
+      const turning = move !== 0 && this.vx * move < 0;
+      let accel;
+      if (this.grounded) accel = move === 0 ? c.groundDecel : turning ? c.turnAccel : c.groundAccel;
+      else accel = move === 0 ? c.airDecel : turning ? c.airTurnAccel : c.airAccel;
+      this.vx = approach(this.vx, target, accel * dt);
+      if (move !== 0) this.facing = move;
+    }
 
     // --- Jump: standing on the ground keeps coyote time topped up, and a
     // buffered press fires as soon as a jump is allowed. Down + jump on a
@@ -142,6 +161,28 @@ class Player {
     this.platform = null;
   }
 
+  /** Bounce off an enemy we stomped. Holding jump bounces higher (variable jump applies). */
+  bounce() {
+    this.vy = -CONFIG.player.stompBounce;
+    this.grounded = false;
+    this.platform = null;
+    this.coyoteTimer = 0;
+    this.jumpCuttable = true;
+  }
+
+  /** Took a hit (health already reduced by World): get knocked away from the source. */
+  knockback(fromX) {
+    const c = CONFIG.player;
+    const dir = Math.sign(this.x + this.w / 2 - fromX) || -this.facing;
+    this.vx = dir * c.hurtKnockbackX;
+    this.vy = -c.hurtKnockbackY;
+    this.grounded = false;
+    this.platform = null;
+    this.jumpCuttable = false;
+    this.invulnTimer = c.invulnTime;
+    this.stunTimer = c.hurtStunTime;
+  }
+
   /** If moving up by `dy` would clip a ceiling corner by a few pixels, nudge sideways instead. */
   cornerCorrect(level, dy) {
     if (!Physics.boxHitsSolid(level, this.x, this.y + dy, this.w, this.h)) return;
@@ -158,6 +199,8 @@ class Player {
   }
 
   draw(ctx, alpha) {
+    // Blink while invulnerable
+    if (this.invulnTimer > 0 && Math.floor(this.invulnTimer * 12) % 2 === 0) return;
     const x = lerp(this.px, this.x, alpha);
     const y = lerp(this.py, this.y, alpha);
     ctx.fillStyle = '#ff5a5f';
