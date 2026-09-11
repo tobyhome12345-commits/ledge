@@ -10,11 +10,13 @@ class Game {
   constructor(canvas) {
     this.input = new Input();
     this.renderer = new Renderer(canvas);
+    this.hud = new Hud();
     this.world = new World(LEVELS[0]);
     this.debug = new URLSearchParams(location.search).has('debug');
     this.time = 0;          // total real time, for background animation
     this.accumulator = 0;   // unsimulated time carried between frames
     this.lastFrame = 0;
+    this.fps = 60;
     this.frame = this.frame.bind(this);
   }
 
@@ -24,8 +26,10 @@ class Game {
   }
 
   frame(now) {
-    const dt = Math.min((now - this.lastFrame) / 1000, CONFIG.MAX_FRAME);
+    const elapsed = (now - this.lastFrame) / 1000;
+    const dt = Math.min(elapsed, CONFIG.MAX_FRAME);
     this.lastFrame = now;
+    if (elapsed > 0) this.fps += (1 / elapsed - this.fps) * 0.05;
     this.accumulator += dt;
     while (this.accumulator >= CONFIG.STEP) {
       this.update(CONFIG.STEP);
@@ -40,6 +44,7 @@ class Game {
     this.input.pollGamepads();
     if (this.input.pressed('debug')) this.debug = !this.debug;
     this.world.update(dt, this.input);
+    this.hud.update(dt, this.world);
     this.input.endStep();
   }
 
@@ -52,15 +57,9 @@ class Game {
       r.useWorld();
       this.world.drawDebug(r.ctx, alpha);
     }
-
     r.useView();
-    const ctx = r.ctx;
-    const p = this.world.player;
-    ctx.font = '600 14px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(8, 8, 420, 26);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`Step 4 - hearts:${p.health}  x:${p.x.toFixed(0)} y:${p.y.toFixed(0)} vx:${p.vx.toFixed(0)} vy:${p.vy.toFixed(0)} ${p.grounded ? 'grounded' : 'air'}`, 16, 26);
+    this.hud.draw(r.ctx, this.world);
+    if (this.debug) this.hud.drawDebug(r.ctx, this.world, this.fps);
   }
 }
 

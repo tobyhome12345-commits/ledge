@@ -52,8 +52,8 @@ const LEGEND = {
   ':': { tile: TILE.BACKDROP },
   // Entities (their spawn functions are added as the entity types are built)
   'P': { spawn: (world, tx, ty) => world.setPlayerStart(tx, ty) },
-  'o': {},                        // coin
-  '*': { tile: TILE.BACKDROP },   // coin in front of cave backdrop
+  'o': { spawn: (world, tx, ty) => world.addItem(new Coin(tx, ty)) },
+  '*': { tile: TILE.BACKDROP, spawn: (world, tx, ty) => world.addItem(new Coin(tx, ty)) }, // coin in a cave
   'e': { spawn: (world, tx, ty) => world.addEnemy(new Walker(tx, ty)) },
   'C': {},                        // checkpoint
   'G': {},                        // goal flag

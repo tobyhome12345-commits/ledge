@@ -13,9 +13,15 @@ class World {
     this.start = { x: 2 * T, y: this.level.height - 4 * T }; // overwritten by a 'P' tile
     this.platforms = (levelData.movers || []).map((def) => new MovingPlatform(def));
     this.enemies = [];
+    this.items = [];
 
     // Let every map character with a spawn() create its entity.
     for (const s of this.level.spawns) s.spawn(this, s.tx, s.ty);
+
+    this.stats = {
+      coins: 0,
+      totalCoins: this.items.filter((it) => it instanceof Coin).length,
+    };
 
     this.player = new Player(this.start.x - CONFIG.player.width / 2, this.start.y - CONFIG.player.height);
     this.camera.snapTo(this.player, this.level);
@@ -30,6 +36,13 @@ class World {
   }
 
   addEnemy(enemy) { this.enemies.push(enemy); }
+  addItem(item) { this.items.push(item); }
+
+  // --- Events raised by entities
+
+  collectCoin() {
+    this.stats.coins += 1;
+  }
 
   // --- Simulation
 
@@ -45,6 +58,12 @@ class World {
     this.bumpEnemies();
     this.checkEnemyContacts();
     this.enemies = this.enemies.filter((e) => !e.removed);
+
+    for (const it of this.items) {
+      it.update(dt, this);
+      if (!it.removed && overlaps(p, it)) it.onTouch(this);
+    }
+    this.items = this.items.filter((it) => !it.removed);
 
     // Temporary until checkpoints exist: falling out of the level restarts you.
     if (p.y > this.level.height) this.killPlayer();
@@ -108,7 +127,9 @@ class World {
 
   /** Draw entities (the renderer has already set the world transform). */
   draw(ctx, alpha) {
+    const t = this.time;
     for (const plat of this.platforms) plat.draw(ctx, alpha, this.theme);
+    for (const it of this.items) it.draw(ctx, alpha, t);
     for (const e of this.enemies) e.draw(ctx, alpha);
     this.player.draw(ctx, alpha);
   }
@@ -121,6 +142,7 @@ class World {
     };
     ctx.lineWidth = 1;
     for (const plat of this.platforms) box(plat, '#3aa0ff');
+    for (const it of this.items) box(it, '#ffd000');
     for (const e of this.enemies) box(e, '#ff4444');
     box(this.player, '#00ff88');
   }
