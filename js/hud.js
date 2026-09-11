@@ -24,17 +24,24 @@ class Hud {
     this.heartPulse = Math.max(0, this.heartPulse - dt * 2);
   }
 
-  draw(ctx, world) {
+  draw(ctx, world, lives) {
     const W = CONFIG.VIEW_W;
     const p = world.player;
+    const maxHp = CONFIG.player.maxHealth;
 
-    // --- Hearts (top-left)
-    panel(ctx, 12, 10, 34 * CONFIG.player.maxHealth + 14, 42);
-    for (let i = 0; i < CONFIG.player.maxHealth; i++) {
+    // --- Hearts and lives (top-left)
+    const livesX = 24 + maxHp * 34;
+    panel(ctx, 12, 10, livesX + 50, 42);
+    for (let i = 0; i < maxHp; i++) {
       const justLost = i === p.health && this.heartPulse > 0;
       const size = 26 * (1 + (justLost ? this.heartPulse * 0.35 : 0));
       drawHeart(ctx, 36 + i * 34, 31 - size * 0.46, size, i < p.health, justLost ? this.heartPulse : 0);
     }
+    drawPlayerIcon(ctx, livesX + 12, 31, 18);
+    ctx.font = `bold 18px ${HUD_FONT}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    outlinedText(ctx, `×${lives}`, livesX + 26, 32, '#ffffff');
 
     // --- Coins and timer (top-right)
     panel(ctx, W - 176, 10, 164, 42);
@@ -50,7 +57,7 @@ class Hud {
     outlinedText(ctx, `/ ${world.stats.totalCoins}`, W - 134 + coinTextW + 6, 33, '#f3e6c0');
     ctx.textAlign = 'right';
     ctx.font = `bold 16px ${HUD_FONT}`;
-    outlinedText(ctx, formatTime(world.time), W - 22, 32, '#ffffff');
+    outlinedText(ctx, formatTime(world.clock), W - 22, 32, '#ffffff');
 
     // --- Level name (top-centre)
     ctx.textAlign = 'center';
@@ -59,7 +66,7 @@ class Hud {
 
     // --- Title card for the first moments of a level
     const t = world.time;
-    if (t < 2.6) {
+    if (t < 2.6 && !world.complete) {
       const a = t < 1.6 ? 1 : 1 - (t - 1.6);
       ctx.globalAlpha = clamp(a, 0, 1);
       ctx.font = `bold 20px ${HUD_FONT}`;
@@ -135,6 +142,22 @@ function drawHeart(ctx, x, top, size, full, flash = 0) {
     ctx.ellipse(x - w * 0.45, top + s * 0.28, s * 0.09, s * 0.12, -0.5, 0, TAU);
     ctx.fill();
   }
+}
+
+/** A tiny version of the player, centred on (x, y). */
+function drawPlayerIcon(ctx, x, y, size) {
+  ctx.fillStyle = 'rgba(20, 22, 38, 0.9)';
+  ctx.beginPath();
+  roundRectPath(ctx, x - size / 2 - 2, y - size / 2 - 2, size + 4, size + 4, 6);
+  ctx.fill();
+  ctx.fillStyle = '#ff5a5f';
+  ctx.beginPath();
+  roundRectPath(ctx, x - size / 2, y - size / 2, size, size, 5);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x + 1, y - size * 0.25, size * 0.24, size * 0.32);
+  ctx.fillStyle = '#1d1d2b';
+  ctx.fillRect(x + 1 + size * 0.1, y - size * 0.18, size * 0.12, size * 0.2);
 }
 
 function drawCoinIcon(ctx, x, y, r) {

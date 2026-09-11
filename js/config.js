@@ -55,6 +55,17 @@ const CONFIG = {
     walker: { speed: 55, gravity: 1800, maxFallSpeed: 720 },
   },
 
+  // Lives and dying. Spikes and pits cost one heart and send you back to the
+  // last checkpoint; running out of hearts costs a life (and refills hearts).
+  startLives: 3,
+  coinsPerLife: 50,   // collect this many coins for an extra life
+  death: {
+    delay: 0.55,        // seconds to watch the burst before the screen fades
+    fadeOut: 0.22,
+    fadeIn: 0.3,
+    respawnInvuln: 1.0, // blinking grace period after respawning
+  },
+
   camera: {
     followRate: 6,     // horizontal easing speed (higher = snappier)
     followRateY: 5,    // vertical easing speed

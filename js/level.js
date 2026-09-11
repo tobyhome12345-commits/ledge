@@ -43,20 +43,21 @@ const TILE_PROPS = {
  * To add a new tile or entity type, add a character here.
  */
 const LEGEND = {
-  '.': {},
-  ' ': {},
+  // Tiles
+  '.': {},                          // empty
+  ' ': {},                          // empty
   '#': { tile: TILE.GROUND },
   'B': { tile: TILE.BRICK },
   '-': { tile: TILE.ONEWAY },
   '^': { tile: TILE.SPIKES },
   ':': { tile: TILE.BACKDROP },
-  // Entities (their spawn functions are added as the entity types are built)
+  // Entities (place them on the empty tile where they should stand)
   'P': { spawn: (world, tx, ty) => world.setPlayerStart(tx, ty) },
   'o': { spawn: (world, tx, ty) => world.addItem(new Coin(tx, ty)) },
   '*': { tile: TILE.BACKDROP, spawn: (world, tx, ty) => world.addItem(new Coin(tx, ty)) }, // coin in a cave
   'e': { spawn: (world, tx, ty) => world.addEnemy(new Walker(tx, ty)) },
-  'C': {},                        // checkpoint
-  'G': {},                        // goal flag
+  'C': { spawn: (world, tx, ty) => world.addItem(new Checkpoint(tx, ty)) },
+  'G': { spawn: (world, tx, ty) => world.addItem(new Goal(tx, ty)) },
 };
 
 class Level {

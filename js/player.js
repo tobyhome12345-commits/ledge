@@ -34,6 +34,7 @@ class Player {
     this.health = c.maxHealth;
     this.invulnTimer = 0;     // > 0: recently hurt, can't be hurt again (blinks)
     this.stunTimer = 0;       // > 0: knocked back, controls ignored
+    this.dead = false;        // true during the death/respawn sequence
   }
 
   /** Put the player back at a spawn point (bottom-centre) in a clean state. */
@@ -45,6 +46,7 @@ class Player {
     this.platform = null;
     this.coyoteTimer = this.jumpBufferTimer = this.dropTimer = this.stunTimer = 0;
     this.jumpCuttable = false;
+    this.dead = false;
   }
 
   update(dt, input, world) {
@@ -52,6 +54,7 @@ class Player {
     const level = world.level;
     this.px = this.x;
     this.py = this.y;
+    if (this.dead) return;
 
     this.coyoteTimer -= dt;
     this.jumpBufferTimer -= dt;
@@ -199,16 +202,29 @@ class Player {
   }
 
   draw(ctx, alpha) {
+    if (this.dead) return;
     // Blink while invulnerable
     if (this.invulnTimer > 0 && Math.floor(this.invulnTimer * 12) % 2 === 0) return;
     const x = lerp(this.px, this.x, alpha);
     const y = lerp(this.py, this.y, alpha);
-    ctx.fillStyle = '#ff5a5f';
-    ctx.fillRect(x, y, this.w, this.h);
-    // Direction indicator: an eye on the side we're facing
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + this.w / 2 + this.facing * 4 - 3, y + 7, 6, 7);
-    ctx.fillStyle = '#1d1d2b';
-    ctx.fillRect(x + this.w / 2 + this.facing * 6 - 1.5, y + 9, 3, 4);
+    drawHero(ctx, x + this.w / 2, y + this.h, this.facing);
   }
+}
+
+/**
+ * Draw the hero standing with its feet at (cx, bottom). Shared by the Player
+ * and the title screen.
+ */
+function drawHero(ctx, cx, bottom, facing) {
+  const w = CONFIG.player.width;
+  const h = CONFIG.player.height;
+  const x = cx - w / 2;
+  const y = bottom - h;
+  ctx.fillStyle = '#ff5a5f';
+  ctx.fillRect(x, y, w, h);
+  // Direction indicator: an eye on the side we're facing
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(cx + facing * 4 - 3, y + 7, 6, 7);
+  ctx.fillStyle = '#1d1d2b';
+  ctx.fillRect(cx + facing * 6 - 1.5, y + 9, 3, 4);
 }

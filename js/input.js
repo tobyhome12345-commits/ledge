@@ -44,8 +44,9 @@ class Input {
       this.down.delete(e.code);
       this.releasedSet.add(e.code);
     });
-    // Losing focus would otherwise leave keys "stuck" down.
+    // Losing focus would otherwise leave keys "stuck" down (the keyup goes elsewhere).
     window.addEventListener('blur', () => this.reset());
+    document.addEventListener('visibilitychange', () => this.reset());
   }
 
   held(action) { return KEY_BINDINGS[action].some((c) => this.down.has(c)); }
