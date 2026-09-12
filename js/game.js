@@ -15,6 +15,7 @@
  */
 class Game {
   constructor(canvas) {
+    Sfx.init();
     this.input = new Input();
     this.renderer = new Renderer(canvas);
     this.hud = new Hud();
@@ -155,6 +156,7 @@ class Game {
       this.lives += 1;
       const p = this.world.player;
       this.world.popup('1UP!', p.x + p.w / 2, p.y - 16, '#7dffb8');
+      Sfx.play('oneUp');
     }
   }
 
@@ -168,6 +170,7 @@ class Game {
     this.stateTime += dt;
     input.pollGamepads();
     if (input.pressed('debug')) this.debug = !this.debug;
+    if (input.pressed('mute') && !Sfx.toggleMute()) Sfx.play('pause');
     const busy = this.fadeDir !== 0; // ignore menu keys mid-transition
 
     switch (this.state) {

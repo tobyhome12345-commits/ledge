@@ -36,6 +36,7 @@ class Input {
 
     window.addEventListener('keydown', (e) => {
       if (this.gameKeys.has(e.code)) e.preventDefault();
+      Sfx.unlock();
       if (e.repeat) return;
       this.down.add(e.code);
       this.pressedSet.add(e.code);

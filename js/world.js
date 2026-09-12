@@ -204,6 +204,7 @@ class World {
     this.deathTimer = CONFIG.death.delay;
     this.camera.shake(8, 0.35);
     this.flash = 0.6;
+    Sfx.play('die');
 
     // Burst where the player was (clamped to the screen for pits).
     const bx = p.x + p.w / 2;
@@ -236,12 +237,14 @@ class World {
     this.particles.burst(coin.x + coin.w / 2, coin.y + coin.h / 2, 6, {
       colors: ['#fff5bf', '#ffd23f'], speed: 90, life: 0.35, size: 4, gravity: 0, shape: 'circle',
     });
+    Sfx.play('coin');
     if (this.hooks.onCoin) this.hooks.onCoin();
   }
 
   activateCheckpoint(cp) {
     this.checkpoint = cp.spawn;
     this.player.health = CONFIG.player.maxHealth;
+    Sfx.play('checkpoint');
     this.popup('CHECKPOINT!', cp.cx, cp.groundY - 76, '#7dffb8');
     this.particles.burst(cp.cx, cp.groundY - 56, 18, {
       colors: ['#2fd08a', '#a7f3d0', '#ffffff', '#ffd23f'], speed: 220, life: 0.8, size: 5, gravity: 400,
@@ -250,6 +253,7 @@ class World {
 
   completeLevel(goal) {
     this.complete = true;
+    Sfx.play('goal');
     this.popup('LEVEL CLEAR!', goal.cx, goal.groundY - 150, '#ffe17a');
     for (let i = 0; i < 3; i++) {
       this.particles.burst(goal.cx + (i - 1) * 60, goal.groundY - 140 - i * 20, 24, {

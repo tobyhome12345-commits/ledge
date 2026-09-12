@@ -39,6 +39,19 @@ const CONFIG = {
     jumpBufferTime: 0.12,  // a jump pressed this long before landing still happens
     cornerCorrection: 6,   // px we slide around a ceiling corner instead of bonking
 
+    // Squash and stretch: how fast the character springs back to normal
+    squashRate: 14,
+
+    // Stretch goals - flip these on or off
+    wallJump: true,        // wall slide + wall jump
+    wallSlideSpeed: 110,   // max fall speed while hugging a wall
+    wallJumpVX: 270,       // how hard the wall pushes you away
+    wallJumpVY: 540,
+    wallJumpLock: 0.16,    // steering disabled this long after a wall jump
+    wallCoyoteTime: 0.08,  // grace period after letting go of a wall
+    doubleJump: false,     // a second jump in mid-air
+    doubleJumpHeight: 76,
+
     // Combat
     maxHealth: 3,          // hearts
     stompBounce: 520,      // upward speed after stomping an enemy (hold jump to bounce higher)
@@ -49,6 +62,7 @@ const CONFIG = {
 
     get gravity() { return (2 * this.jumpHeight) / this.jumpTimeToApex ** 2; },
     get jumpVelocity() { return (2 * this.jumpHeight) / this.jumpTimeToApex; },
+    get doubleJumpVelocity() { return Math.sqrt(2 * this.gravity * this.doubleJumpHeight); },
   },
 
   enemies: {
