@@ -28,7 +28,10 @@ URL options: `?level=2` starts on a given level, `?debug` opens with the debug o
 | 1-1 | First Steps | meadow | Tutorial - signposts teach one mechanic at a time |
 | 1-2 | Green Ledge | meadow | The full first level: ferry, elevator, hidden cave |
 | 1-3 | Dusk Heights | dusk | Wider gaps, spike rhythms, a long climb |
-| 1-4 | The Spire | cavern | Hardest: narrow ledges over a bottomless cavern |
+| 1-4 | The Spire | cavern | Narrow ledges over a bottomless cavern |
+| 1-5 | Bounce Country | meadow | Bounce pads and flyers |
+| 1-6 | Crumble Caves | cavern | Blocks that fall away, spiky walkers you cannot stomp |
+| 1-7 | Ember Ascent | ember | Everything at once, over a long drop |
 
 ## What's in it
 
@@ -48,6 +51,13 @@ URL options: `?level=2` starts on a given level, `?debug` opens with the debug o
 - **Feel and feedback**: squash and stretch, dust, particle bursts, screen shake, a camera with
   look-ahead and a vertical dead zone, parallax scenery, and procedural WebAudio sound effects.
 - **Signposts** that show a hint when you walk up to them, used by the tutorial level.
+- **Bounce pads, crumbling blocks, flyers and spiky walkers** in the later levels,
+  each introduced one at a time.
+- **Title menu** with Play, Levels and Options; levels unlock as you finish the one
+  before, and the level list remembers your best time and coin count.
+- **Options** for music and sound volume, screen shake and a double-jump assist,
+  all saved in the browser. M mutes everything instantly.
+- **Music**: a small chiptune sequencer, one track per theme, synthesised at runtime.
 
 ## Project layout
 
@@ -58,7 +68,9 @@ js/
   utils.js          small math/drawing helpers
   input.js          keyboard + gamepad -> named actions
   sfx.js            procedural sound effects
-  themes.js         colour palettes ('meadow', 'dusk', 'cavern')
+  settings.js       saved options and level progress (localStorage)
+  music.js          chiptune sequencer, one track per theme
+  themes.js         colour palettes ('meadow', 'dusk', 'cavern', 'ember')
   level.js          tile ids, the map LEGEND, and the Level parser
   physics.js        AABB vs tile-grid collision
   camera.js         follow camera with easing, look-ahead, dead zone, shake
@@ -74,7 +86,7 @@ js/
   game.js           main loop and the game state machine
 levels/
   levels.js         the LEVELS registry
-  level1.js .. level4.js   the four levels, pure data
+  level1.js .. level7.js   the seven levels, pure data
 tools/
   playtest-bot.js   robot player that checks a level can be finished
 ```
@@ -125,6 +137,8 @@ Map characters (`LEGEND` in `js/level.js`):
 | `B` | brick block | `*` | coin in a cave |
 | `-` | one-way platform | `e` | walker enemy |
 | `^` | spikes | `C` | checkpoint |
+| `J` | bounce pad | `h` | spiky walker (cannot be stomped) |
+| `x` | crumbling block | `f` | flyer |
 | `:` | cave backdrop | `G` | goal flag |
 
 Moving platforms are listed in `movers`, in tile units: start at `(x, y)`, `w` tiles wide,

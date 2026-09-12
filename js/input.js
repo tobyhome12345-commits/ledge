@@ -22,6 +22,12 @@ const KEY_BINDINGS = {
   quit:    ['KeyQ'],
   mute:    ['KeyM'],
   debug:   ['Backquote', 'F3'],
+  // Menu navigation (menus are separate states, so these can share keys with play)
+  menuUp:    ['ArrowUp', 'KeyW', 'Pad:up'],
+  menuDown:  ['ArrowDown', 'KeyS', 'Pad:down'],
+  menuLeft:  ['ArrowLeft', 'KeyA', 'Pad:left'],
+  menuRight: ['ArrowRight', 'KeyD', 'Pad:right'],
+  back:      ['Escape', 'KeyQ', 'Backspace', 'Pad:select'],
 };
 
 class Input {
@@ -30,6 +36,8 @@ class Input {
     this.pressedSet = new Set(); // codes that went down since the last step
     this.releasedSet = new Set(); // codes that went up since the last step
     this.padHeld = new Set();    // virtual gamepad codes held last poll
+    // Pointer state for clickable menus
+    this.mouse = { clientX: 0, clientY: 0, moved: false, clicked: false };
 
     // Keys we handle ourselves (stop Space/arrows from scrolling, F3 from searching, ...)
     this.gameKeys = new Set(Object.values(KEY_BINDINGS).flat());
@@ -45,6 +53,16 @@ class Input {
       this.down.delete(e.code);
       this.releasedSet.add(e.code);
     });
+    window.addEventListener('mousemove', (e) => {
+      this.mouse.clientX = e.clientX;
+      this.mouse.clientY = e.clientY;
+      this.mouse.moved = true;
+    });
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 0) this.mouse.clicked = true;
+      Sfx.unlock();
+    });
+
     // Losing focus would otherwise leave keys "stuck" down (the keyup goes elsewhere).
     window.addEventListener('blur', () => this.reset());
     document.addEventListener('visibilitychange', () => this.reset());
@@ -58,6 +76,8 @@ class Input {
   endStep() {
     this.pressedSet.clear();
     this.releasedSet.clear();
+    this.mouse.clicked = false;
+    this.mouse.moved = false;
   }
 
   reset() {
@@ -79,6 +99,7 @@ class Input {
       if (btn(14) || ax < -0.4) now.add('Pad:left');
       if (btn(15) || ax > 0.4) now.add('Pad:right');
       if (btn(13) || ay > 0.6) now.add('Pad:down');
+      if (btn(12) || ay < -0.6) now.add('Pad:up');
       if (btn(0) || btn(1)) now.add('Pad:a');   // A/B (Cross/Circle) both jump
       if (btn(9)) now.add('Pad:start');
       if (btn(8)) now.add('Pad:select');

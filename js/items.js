@@ -193,7 +193,7 @@ class Sign {
 
   update(dt, world) {
     const p = world.player;
-    const near = Math.abs(p.x + p.w / 2 - this.cx) < 110 && Math.abs(p.y + p.h - this.groundY) < 120;
+    const near = !world.demo && Math.abs(p.x + p.w / 2 - this.cx) < 110 && Math.abs(p.y + p.h - this.groundY) < 120;
     this.show = clamp(this.show + (near ? dt * 5 : -dt * 4), 0, 1);
   }
 

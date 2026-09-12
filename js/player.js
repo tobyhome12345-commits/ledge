@@ -37,6 +37,7 @@ class Player {
     this.invulnTimer = 0;     // > 0: recently hurt, cannot be hurt again (blinks)
     this.stunTimer = 0;       // > 0: knocked back, controls ignored
     this.dead = false;        // true during the death/respawn sequence
+    this.justLanded = false;  // landed during this step (bounce pads check it)
 
     // Wall interaction (used when CONFIG.player.wallJump is on)
     this.wallDir = 0;         // -1 wall on the left, 1 on the right, 0 none
@@ -174,7 +175,8 @@ class Player {
     }
 
     const landed = hit.landed || platform !== null;
-    if (landed && !this.grounded) this.onLand(world, this.vy);
+    this.justLanded = landed && !this.grounded;
+    if (this.justLanded) this.onLand(world, this.vy);
     if (landed) {
       this.vy = 0;
       this.jumpCuttable = false;
@@ -278,6 +280,20 @@ class Player {
     this.coyoteTimer = 0;
     this.grounded = false;
     this.platform = null;
+  }
+
+  /** Flung upward by a bounce pad. */
+  launch(world) {
+    this.vy = -CONFIG.player.springLaunch;
+    this.grounded = false;
+    this.platform = null;
+    this.coyoteTimer = 0;
+    this.jumpCuttable = false; // a pad always gives its full height, held or not
+    this.stretch(0.65, 1.4);
+    world.particles.burst(this.x + this.w / 2, this.y + this.h, 12, {
+      colors: ['#ffffff', '#7dffb8'], speed: 180, angle: Math.PI / 2, spread: Math.PI, life: 0.4, size: 4, gravity: 300,
+    });
+    Sfx.play('spring');
   }
 
   /** Bounce off an enemy we stomped. Holding jump bounces higher (variable jump applies). */

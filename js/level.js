@@ -25,6 +25,8 @@ const TILE = {
   ONEWAY: 3,    // wooden platform: jump up through it, land on top
   SPIKES: 4,    // hazard: costs a heart and sends you back to the checkpoint
   BACKDROP: 5,  // decorative cave wall behind the playfield (not solid)
+  SPRING: 6,    // bounce pad: launches you high
+  CRUMBLE: 7,   // breaks a moment after you stand on it, then comes back
 };
 
 /** Physical properties of each tile id. */
@@ -35,6 +37,8 @@ const TILE_PROPS = {
   [TILE.ONEWAY]:   { oneWay: true },
   [TILE.SPIKES]:   { hazard: true },
   [TILE.BACKDROP]: {},
+  [TILE.SPRING]:   { solid: true },
+  [TILE.CRUMBLE]:  { solid: true },
 };
 
 /**
@@ -51,11 +55,15 @@ const LEGEND = {
   '-': { tile: TILE.ONEWAY },
   '^': { tile: TILE.SPIKES },
   ':': { tile: TILE.BACKDROP },
+  'J': { tile: TILE.SPRING },
+  'x': { tile: TILE.CRUMBLE },
   // Entities (place them on the empty tile where they should stand)
   'P': { spawn: (world, tx, ty) => world.setPlayerStart(tx, ty) },
   'o': { spawn: (world, tx, ty) => world.addItem(new Coin(tx, ty)) },
   '*': { tile: TILE.BACKDROP, spawn: (world, tx, ty) => world.addItem(new Coin(tx, ty)) }, // coin in a cave
   'e': { spawn: (world, tx, ty) => world.addEnemy(new Walker(tx, ty)) },
+  'h': { spawn: (world, tx, ty) => world.addEnemy(new Spiker(tx, ty)) },
+  'f': { spawn: (world, tx, ty) => world.addEnemy(new Flyer(tx, ty)) },
   'C': { spawn: (world, tx, ty) => world.addItem(new Checkpoint(tx, ty)) },
   'G': { spawn: (world, tx, ty) => world.addItem(new Goal(tx, ty)) },
 };

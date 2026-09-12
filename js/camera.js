@@ -77,6 +77,7 @@ class Camera {
 
   /** Start a screen shake (a stronger shake overrides a weaker one). */
   shake(magnitude, duration = 0.3) {
+    if (typeof Settings !== 'undefined' && !Settings.get('screenShake')) return;
     const current = this.shakeTime > 0 ? this.shakeMag * (this.shakeTime / this.shakeDuration) : 0;
     if (magnitude < current) return;
     this.shakeMag = magnitude;

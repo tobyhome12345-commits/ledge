@@ -28,18 +28,23 @@ function makeBot() {
     const groundAt = (tx, ty) => L.isSolid(tx, ty) || L.isOneWay(tx, ty);
     const standable = (tx, ty) => groundAt(tx, ty) && !L.isSolid(tx, ty - 1) && !L.isHazard(tx, ty - 1);
 
-    /** Top y of the nearest place to land ahead, or null if there is none. */
-    const landingTop = (fromX, tiles, rise, drop) => {
+    /**
+     * Nearest place to land ahead: { top, dist } in world pixels, or null.
+     * The distance matters - a low landing far away still needs a full jump.
+     */
+    const landingSpot = (fromX, tiles, rise, drop) => {
       const c0 = Math.floor(fromX / T);
       for (let tx = c0; tx <= c0 + tiles; tx++) {
         for (let ty = Math.floor((feet - rise) / T); ty <= Math.floor((feet + drop) / T); ty++) {
-          if (standable(tx, ty)) return ty * T;
+          if (standable(tx, ty)) return { top: ty * T, dist: tx * T - fromX };
         }
       }
       return null;
     };
-    const enemyNear = (range) => world.enemies.some(
-      (e) => e.alive && Math.abs(e.x + e.w / 2 - cx) < range && Math.abs(e.y + e.h - feet) < 30
+    // Only stompable enemies are worth jumping onto; spiky ones need an early jump.
+    const enemyNear = (range, stompableOnly = true) => world.enemies.some(
+      (e) => e.alive && (!stompableOnly || e.stompable) &&
+        Math.abs(e.x + e.w / 2 - cx) < range && Math.abs(e.y + e.h - feet) < 30
     );
 
     const keys = new Set();
@@ -52,10 +57,10 @@ function makeBot() {
       // Riding: wait until there is somewhere to get off, then run to the edge and jump.
       const pl = p.platform;
       const vertical = pl.travelY !== 0;
-      const exit = landingTop(pl.x + pl.w + 1, vertical ? 1 : 4, 90, vertical ? 8 : 120);
+      const exit = landingSpot(pl.x + pl.w + 1, vertical ? 1 : 4, 90, vertical ? 8 : 120);
       const dx = pl.x + pl.w / 2 - cx;
       if (exit === null) move = Math.abs(dx) > 6 ? Math.sign(dx) : 0;
-      else if (p.x + p.w >= pl.x + pl.w - 3) { jump = true; hop = exit > feet + 24; }
+      else if (p.x + p.w >= pl.x + pl.w - 3) { jump = true; hop = exit.top > feet + 24 && exit.dist < 2.5 * T; }
     } else if (p.grounded) {
       const lift = world.platforms.find((pl) => pl.travelY !== 0 && cx > pl.x0 && cx < pl.x0 + pl.w);
       if (lift) {
@@ -67,14 +72,31 @@ function makeBot() {
         const ahead = p.x + p.w + 4;
         const wall = Physics.boxHitsSolid(L, p.x + 6, p.y, p.w, p.h);
         const hazard = L.isHazard(Math.floor((ahead + 8) / T), Math.floor((feet - 1) / T));
+        // Stompable enemies: jump when close (landing on them is the point).
+        // Spiky ones: jump early so the arc clears them entirely.
         const enemy = enemyNear(48) || world.enemies.some(
-          (e) => e.alive && e.x > p.x && e.x - (p.x + p.w) < 50 && Math.abs(e.y + e.h - feet) < 40
+          (e) => e.alive && e.stompable && e.x > p.x && e.x - (p.x + p.w) < 50 && Math.abs(e.y + e.h - feet) < 40
+        );
+        const spikyAhead = world.enemies.some(
+          (e) => e.alive && !e.stompable && e.x > p.x &&
+            e.x - (p.x + p.w) > -12 && e.x - (p.x + p.w) < 104 && Math.abs(e.y + e.h - feet) < 40
         );
         const floorAhead = groundAt(Math.floor(ahead / T), Math.floor((feet + 1) / T));
-        if (wall || hazard || enemy) jump = true;
-        else if (!floorAhead) {
-          const top = landingTop(ahead, 5, 96, 200);
-          if (top !== null) { jump = true; hop = top > feet + 24; }
+        // A wall too tall to jump: head back to the nearest bounce pad behind us
+        const tallWall = wall && L.isSolid(Math.floor((p.x + p.w + 6) / T), Math.floor((feet - 100) / T));
+        let padX = null;
+        if (tallWall) {
+          const row = Math.floor((feet + 1) / T);
+          for (let d = 0; d <= 10 && padX === null; d++) {
+            const tx = Math.floor(cx / T) - d;
+            if (L.tileAt(tx, row) === TILE.SPRING) padX = tx * T + T / 2;
+          }
+        }
+        if (padX !== null) move = padX < cx - 4 ? -1 : padX > cx + 4 ? 1 : 0;
+        else if (wall || hazard || enemy || spikyAhead) jump = true;
+        else if (!floorAhead && padX === null) {
+          const spot = landingSpot(ahead, 5, 96, 200);
+          if (spot !== null) { jump = true; hop = spot.top > feet + 24 && spot.dist < 2.5 * T; }
           else {
             const reach = world.platforms.find(
               (pl) => pl.x < ahead + 60 && pl.x + pl.w > ahead + 10 && pl.y > feet - 90 && pl.y < feet + 70
@@ -105,16 +127,20 @@ function makeBot() {
 function botRun(levelIndex = 0, seconds = 400, opts = {}) {
   let done = false;
   let downs = 0;
+  let lastProgress = 0;
+  let t = 0;
   const world = new World(LEVELS[levelIndex], {
     onLevelComplete: () => { done = true; },
-    onPlayerDown: (lostLife) => { downs++; world.respawnPlayer(lostLife); },
+    onPlayerDown: (lostLife) => {
+      downs++;
+      world.respawnPlayer(lostLife);
+      lastProgress = t; // walking back from a checkpoint is not being stuck
+    },
   });
   if (opts.noEnemies) world.enemies = [];
   const bot = makeBot();
   let prev = new Set();
   let maxX = 0;
-  let lastProgress = 0;
-  let t = 0;
   const steps = Math.round(seconds / CONFIG.STEP);
   for (let i = 0; i < steps && !done; i++) {
     t = i * CONFIG.STEP;

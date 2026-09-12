@@ -37,6 +37,23 @@ const THEMES = {
     track: 'rgba(180, 160, 255, 0.2)',
   },
 
+  ember: {
+    skyTop: '#2a0f14', skyBottom: '#8a2a17',
+    sun: '#ffd08a', sunGlow: 'rgba(255, 140, 60, 0.22)',
+    cloud: 'rgba(130, 55, 40, 0.45)',
+    far: '#4a1c1c', farPeak: '#8a3a24',
+    mid: '#3a1418',
+    near: '#280d11',
+    dirt: '#4a2c2a', dirtDark: '#3a2220', dirtEdge: '#281514',
+    grass: '#e2622c', grassLight: '#ffa64d',               // molten crust instead of grass
+    brick: '#7a3b2a', brickLight: '#a85b3c', brickDark: '#52261b',
+    plank: '#8a5a3a', plankLight: '#b2794f', plankDark: '#5a3826',
+    spike: '#ffe9d0', spikeShade: '#c7a08a', spikeBase: '#5a3125',
+    cave: '#2a1412', caveDark: '#1d0d0c',
+    mover: '#8a5546', moverLight: '#c08a6e', moverDark: '#5a352b',
+    track: 'rgba(255, 150, 90, 0.22)',
+  },
+
   dusk: {
     skyTop: '#3b2d6b', skyBottom: '#f59f7a',
     sun: '#ffd9a0', sunGlow: 'rgba(255, 190, 120, 0.25)',

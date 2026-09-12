@@ -38,6 +38,7 @@ class World {
     this.demo = false;             // title-screen backdrop: scenery only, no player
     this.checkpoint = this.start;  // where the player respawns
     this.complete = false;         // goal reached
+    this.crumbling = new Map();    // 'tx,ty' -> crumbling block state
     this.deathTimer = 0;           // counts down the death animation
     this.lostLife = false;         // did the current death cost a life?
     this.waitingForRespawn = false;
@@ -89,7 +90,9 @@ class World {
         if (!it.removed && overlaps(p, it)) it.onTouch(this);
       }
       this.checkHazards();
+      if (this.player.grounded) this.checkGroundTiles(p);
     }
+    this.updateCrumbles(dt);
     this.enemies = this.enemies.filter((e) => !e.removed);
     this.items = this.items.filter((it) => !it.removed);
 
@@ -148,6 +151,52 @@ class World {
       this.camera.shake(3, 0.15);
     } else {
       this.hurtPlayer(touching[0].x + touching[0].w / 2);
+    }
+  }
+
+  /**
+   * What are we standing on? Bounce pads fling you up the moment you land,
+   * and crumbling blocks start falling apart as soon as you touch them.
+   */
+  checkGroundTiles(p) {
+    const T = CONFIG.TILE;
+    const row = Math.floor((p.y + p.h) / T);
+    const x0 = Math.floor(p.x / T);
+    const x1 = Math.floor((p.x + p.w - Physics.EPS) / T);
+    let spring = false;
+    for (let tx = x0; tx <= x1; tx++) {
+      const id = this.level.tileAt(tx, row);
+      if (id === TILE.SPRING) spring = true;
+      else if (id === TILE.CRUMBLE) this.startCrumble(tx, row);
+    }
+    if (spring && (p.justLanded || !p.wasSpring)) p.launch(this);
+    p.wasSpring = spring;
+  }
+
+  /** Start the shake-then-fall timer for a block (ignored if already going). */
+  startCrumble(tx, ty) {
+    const key = tx + ',' + ty;
+    if (this.crumbling.has(key)) return;
+    this.crumbling.set(key, { tx, ty, timer: CONFIG.crumble.delay, gone: false });
+    Sfx.play('crumble');
+  }
+
+  updateCrumbles(dt) {
+    const T = CONFIG.TILE;
+    for (const [key, c] of this.crumbling) {
+      c.timer -= dt;
+      if (c.timer > 0) continue;
+      if (!c.gone) {
+        this.level.setTile(c.tx, c.ty, TILE.EMPTY);
+        c.gone = true;
+        c.timer = CONFIG.crumble.respawn;
+        this.particles.burst(c.tx * T + T / 2, c.ty * T + T / 2, 10, {
+          colors: [this.theme.brick, this.theme.brickDark, '#ffffff'], speed: 90, life: 0.5, size: 5, gravity: 700,
+        });
+      } else {
+        this.level.setTile(c.tx, c.ty, TILE.CRUMBLE);
+        this.crumbling.delete(key);
+      }
     }
   }
 

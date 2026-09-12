@@ -57,6 +57,7 @@ const CONFIG = {
     stompBounce: 520,      // upward speed after stomping an enemy (hold jump to bounce higher)
     hurtKnockbackX: 240,
     hurtKnockbackY: 300,
+    springLaunch: 780,     // upward speed from a bounce pad (about 6 tiles)
     hurtStunTime: 0.3,     // controls ignored briefly after a hit, so the knockback reads
     invulnTime: 1.3,       // blinking, can't be hurt again
 
@@ -67,7 +68,12 @@ const CONFIG = {
 
   enemies: {
     walker: { speed: 55, gravity: 1800, maxFallSpeed: 720 },
+    spiker: { speed: 72, gravity: 1800, maxFallSpeed: 720 }, // spiky back: cannot be stomped
+    flyer: { rate: 0.9, range: 3, bob: 20 },                 // floats along a sine path
   },
+
+  // Crumbling blocks: they shake when stepped on, fall away, then come back.
+  crumble: { delay: 0.45, respawn: 3.5 },
 
   // Lives and dying. Spikes and pits cost one heart and send you back to the
   // last checkpoint; running out of hearts costs a life (and refills hearts).

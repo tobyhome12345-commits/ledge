@@ -2,6 +2,7 @@
  * Game: the main loop, the state machine, and everything that spans levels
  * (lives, the extra-life coin bank, whole-run totals).
  *
+ *   title <-> levelSelect / options
  *   title -> playing <-> paused
  *            playing -> complete -> next level ... -> victory -> title
  *            playing -> gameover -> retry level
@@ -15,10 +16,11 @@
  */
 class Game {
   constructor(canvas) {
-    Sfx.init();
     this.input = new Input();
     this.renderer = new Renderer(canvas);
     this.hud = new Hud();
+    Settings.load();
+    Progress.load();
 
     const params = new URLSearchParams(location.search);
     this.debug = params.has('debug');
@@ -28,6 +30,11 @@ class Game {
     this.lives = CONFIG.startLives;
     this.coinBank = 0; // coins toward the next extra life
     this.runStats = { coins: 0, time: 0, deaths: 0 };
+
+    this.menuIndex = 0;      // cursor in the current menu
+    this.menuHitboxes = [];  // filled in by the menu screens, for the mouse
+    this.confirmReset = false;
+    this.audioReady = false; // audio can only start after the first input
 
     this.fade = 0;          // 0..1 black overlay for transitions
     this.fadeDir = 0;       // 1 = fading out, -1 = fading in
@@ -75,6 +82,14 @@ class Game {
     this.stateTime = 0;
   }
 
+  /** Switch to a menu state with the cursor on `index`. */
+  openMenu(state, index = 0) {
+    this.setState(state);
+    this.menuIndex = index;
+    this.menuHitboxes = [];
+    this.confirmReset = false;
+  }
+
   makeWorld(index) {
     return new World(LEVELS[index], {
       onPlayerDown: (lostLife) => this.onPlayerDown(lostLife),
@@ -86,14 +101,14 @@ class Game {
   goToTitle() {
     this.world = this.makeWorld(this.firstLevel);
     this.world.demo = true; // the level scrolls by behind the logo
-    this.setState('title');
+    this.openMenu('title');
   }
 
-  newGame() {
+  newGame(levelIndex = this.firstLevel) {
     this.lives = CONFIG.startLives;
     this.coinBank = 0;
     this.runStats = { coins: 0, time: 0, deaths: 0 };
-    this.loadLevel(this.firstLevel);
+    this.loadLevel(levelIndex);
   }
 
   loadLevel(index) {
@@ -146,6 +161,7 @@ class Game {
     this.runStats.coins += w.stats.coins;
     this.runStats.deaths += w.stats.deaths;
     this.runStats.time += w.clock;
+    Progress.complete(this.levelIndex, w.clock, w.stats.coins); // unlocks the next level
     this.setState('complete');
   }
 
@@ -161,6 +177,102 @@ class Game {
   }
 
   // ---------------------------------------------------------------------------
+  // Menus
+  // ---------------------------------------------------------------------------
+
+  /** Which menu row is the mouse over? -1 for none. */
+  pickHitbox() {
+    const m = this.input.mouse;
+    const p = this.renderer.viewFromClient(m.clientX, m.clientY);
+    for (const box of this.menuHitboxes) {
+      if (p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h) return box.index;
+    }
+    return -1;
+  }
+
+  /**
+   * Shared list-menu behaviour: move the cursor with the keyboard or mouse,
+   * select with Enter or a click, leave with Esc.
+   */
+  updateMenu(count, { horizontal = false, cols = 0, onSelect, onBack } = {}) {
+    const input = this.input;
+    const before = this.menuIndex;
+    if (cols > 0) {
+      // Grid: left/right step one card, up/down jump a whole row
+      if (input.pressed('menuLeft')) this.menuIndex = (this.menuIndex - 1 + count) % count;
+      if (input.pressed('menuRight')) this.menuIndex = (this.menuIndex + 1) % count;
+      if (input.pressed('menuUp')) this.menuIndex = (this.menuIndex - cols + count) % count;
+      if (input.pressed('menuDown')) this.menuIndex = (this.menuIndex + cols) % count;
+    } else {
+      const prevKey = horizontal ? 'menuLeft' : 'menuUp';
+      const nextKey = horizontal ? 'menuRight' : 'menuDown';
+      if (input.pressed(prevKey)) this.menuIndex = (this.menuIndex - 1 + count) % count;
+      if (input.pressed(nextKey)) this.menuIndex = (this.menuIndex + 1) % count;
+    }
+
+    const hover = this.pickHitbox();
+    if (hover >= 0 && input.mouse.moved) this.menuIndex = hover;
+    if (this.menuIndex !== before) Sfx.play('menuMove');
+
+    const clicked = input.mouse.clicked && hover >= 0;
+    if (clicked) this.menuIndex = hover;
+    if (onSelect && (clicked || input.pressed('confirm'))) onSelect(this.menuIndex);
+    else if (onBack && input.pressed('back')) onBack();
+  }
+
+  updateOptions() {
+    const input = this.input;
+    const before = this.menuIndex;
+    if (input.pressed('menuUp')) this.menuIndex = (this.menuIndex - 1 + OPTION_ROWS.length) % OPTION_ROWS.length;
+    if (input.pressed('menuDown')) this.menuIndex = (this.menuIndex + 1) % OPTION_ROWS.length;
+    const hover = this.pickHitbox();
+    if (hover >= 0 && input.mouse.moved) this.menuIndex = hover;
+    if (this.menuIndex !== before) {
+      Sfx.play('menuMove');
+      this.confirmReset = false;
+    }
+
+    const row = OPTION_ROWS[this.menuIndex];
+    const clicked = input.mouse.clicked && hover === this.menuIndex;
+
+    if (row.type === 'volume') {
+      const current = Settings.get(row.key);
+      let value = current;
+      if (input.pressed('menuLeft')) value -= 0.1;
+      if (input.pressed('menuRight')) value += 0.1;
+      value = clamp(Math.round(value * 10) / 10, 0, 1);
+      if (value !== current) {
+        if (Settings.get('muted')) Settings.set('muted', false); // adjusting volume unmutes
+        Settings.set(row.key, value);
+        Sfx.play('menuMove'); // so you hear the level you just picked
+      }
+    } else if (row.type === 'toggle') {
+      if (clicked || input.pressed('confirm') || input.pressed('menuLeft') || input.pressed('menuRight')) {
+        Settings.set(row.key, !Settings.get(row.key));
+        Sfx.play('menuSelect');
+      }
+    } else if (row.type === 'action' && (clicked || input.pressed('confirm'))) {
+      if (this.confirmReset) {
+        Progress.reset();
+        this.confirmReset = false;
+        Sfx.play('menuSelect');
+      } else {
+        this.confirmReset = true;
+        Sfx.play('locked');
+      }
+    }
+
+    if (input.pressed('back')) this.openMenu('title', 2);
+  }
+
+  /** Music follows whatever level is on screen; menus keep playing it. */
+  updateMusic() {
+    if (!this.audioReady) return;
+    Music.setDucked(this.state === 'paused');
+    Music.play((this.world && this.world.data.theme) || 'meadow');
+  }
+
+  // ---------------------------------------------------------------------------
   // Update / render
   // ---------------------------------------------------------------------------
 
@@ -169,20 +281,61 @@ class Game {
     this.time += dt;
     this.stateTime += dt;
     input.pollGamepads();
+
+    // Browsers only allow audio to start from a user gesture.
+    if (!this.audioReady && (input.down.size > 0 || input.mouse.clicked)) {
+      this.audioReady = true;
+      Sfx.unlock();
+    }
     if (input.pressed('debug')) this.debug = !this.debug;
-    if (input.pressed('mute') && !Sfx.toggleMute()) Sfx.play('pause');
+    if (input.pressed('mute') && !Settings.toggleMute()) Sfx.play('pause');
     const busy = this.fadeDir !== 0; // ignore menu keys mid-transition
 
     switch (this.state) {
       case 'title':
         this.world.update(dt, NO_INPUT);
-        this.panTitleCamera();
-        if (!busy && input.pressed('confirm')) this.transition(() => this.newGame());
+        this.panMenuCamera();
+        if (!busy) {
+          this.updateMenu(TITLE_ITEMS.length, {
+            onSelect: (i) => {
+              Sfx.play('menuSelect');
+              if (i === 0) this.transition(() => this.newGame());
+              else if (i === 1) this.openMenu('levelSelect', clamp(this.levelIndex, 0, LEVELS.length - 1));
+              else this.openMenu('options');
+            },
+          });
+        }
+        break;
+
+      case 'levelSelect':
+        this.world.update(dt, NO_INPUT);
+        this.panMenuCamera();
+        if (!busy) {
+          this.updateMenu(LEVELS.length, {
+            cols: LEVEL_SELECT_COLS,
+            onSelect: (i) => {
+              if (Progress.isUnlocked(i)) {
+                Sfx.play('menuSelect');
+                this.transition(() => this.newGame(i));
+              } else {
+                Sfx.play('locked');
+              }
+            },
+            onBack: () => this.openMenu('title', 1),
+          });
+        }
+        break;
+
+      case 'options':
+        this.world.update(dt, NO_INPUT);
+        this.panMenuCamera();
+        if (!busy) this.updateOptions();
         break;
 
       case 'playing':
         if (!busy && input.pressed('pause')) {
           this.setState('paused');
+          Sfx.play('pause');
           break;
         }
         this.world.update(dt, input);
@@ -227,18 +380,19 @@ class Game {
         break;
     }
 
+    this.updateMusic();
     this.updateFade(dt);
     input.endStep();
   }
 
-  /** Slowly sweep the camera across the level behind the title screen. */
-  panTitleCamera() {
+  /** Slowly sweep the camera across the level behind the menus. */
+  panMenuCamera() {
     const cam = this.world.camera;
     const level = this.world.level;
     const range = Math.max(0, level.width - CONFIG.VIEW_W);
     cam.px = cam.x;
     cam.py = cam.y;
-    cam.x = range * (0.5 - 0.5 * Math.cos(this.stateTime * 0.04));
+    cam.x = range * (0.5 - 0.5 * Math.cos(this.time * 0.04));
     cam.y = Math.max(0, level.height - CONFIG.VIEW_H);
   }
 
@@ -248,10 +402,10 @@ class Game {
     const ctx = r.ctx;
     const W = CONFIG.VIEW_W;
     const H = CONFIG.VIEW_H;
-    const playingLike = this.state !== 'title' && this.state !== 'victory';
+    const inLevel = ['playing', 'paused', 'complete', 'gameover'].includes(this.state);
 
     r.drawWorld(this.world, alpha, this.time);
-    if (this.debug && playingLike) {
+    if (this.debug && inLevel) {
       r.drawGrid(this.world.level);
       r.useWorld();
       this.world.drawDebug(ctx, alpha);
@@ -262,16 +416,18 @@ class Game {
       ctx.fillStyle = `rgba(255, 255, 255, ${this.world.flash * 0.45})`;
       ctx.fillRect(0, 0, W, H);
     }
-    if (playingLike) this.hud.draw(ctx, this.world, this.lives);
+    if (inLevel) this.hud.draw(ctx, this.world, this.lives);
 
     switch (this.state) {
       case 'title': Screens.title(ctx, this); break;
+      case 'levelSelect': Screens.levelSelect(ctx, this); break;
+      case 'options': Screens.options(ctx, this); break;
       case 'paused': Screens.pause(ctx, this); break;
       case 'complete': Screens.levelClear(ctx, this); break;
       case 'gameover': Screens.gameOver(ctx, this); break;
       case 'victory': Screens.victory(ctx, this); break;
     }
-    if (this.debug && playingLike) this.hud.drawDebug(ctx, this.world, this.fps);
+    if (this.debug && inLevel) this.hud.drawDebug(ctx, this.world, this.fps);
 
     if (this.fade > 0) {
       ctx.fillStyle = `rgba(8, 9, 20, ${this.fade})`;

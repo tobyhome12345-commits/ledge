@@ -39,6 +39,16 @@ class Renderer {
     this.scale = this.canvas.width / VIEW_W;
   }
 
+  /** Convert a mouse position into view-space coordinates (for menus). */
+  viewFromClient(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: -1, y: -1 };
+    return {
+      x: ((clientX - rect.left) / rect.width) * CONFIG.VIEW_W,
+      y: ((clientY - rect.top) / rect.height) * CONFIG.VIEW_H,
+    };
+  }
+
   setCamera(x, y) {
     this.camX = x;
     this.camY = y;
@@ -67,7 +77,7 @@ class Renderer {
     const view = world.camera.view(alpha, time, world.level);
     this.setCamera(view.x, view.y);
     this.drawBackground(world.theme, world.level, time);
-    this.drawTiles(world.level, world.theme);
+    this.drawTiles(world.level, world.theme, world.crumbling, time);
     this.useWorld();
     world.draw(this.ctx, alpha, this);
   }
@@ -183,7 +193,7 @@ class Renderer {
    * Draws every visible tile. Each "layer" call fills one colour for all
    * tiles of one type in a single path, which keeps draw calls low.
    */
-  drawTiles(level, theme) {
+  drawTiles(level, theme, crumbling, time = 0) {
     const T = CONFIG.TILE;
     const ctx = this.ctx;
     this.useDevice();
@@ -269,6 +279,29 @@ class Renderer {
     });
     layer(TILE.ONEWAY, theme.plank, (tx, ty, x, y) => r(x + 1, y + 1, T - 2, 7));
     layer(TILE.ONEWAY, theme.plankLight, (tx, ty, x, y) => r(x + 1, y + 1, T - 2, 2));
+
+    // Bounce pads: a plate on a coil
+    layer(TILE.SPRING, theme.moverDark, (tx, ty, x, y) => r(x + 3, y + T - 7, T - 6, 7));
+    layer(TILE.SPRING, theme.mover, (tx, ty, x, y) => {
+      r(x + 7, y + T - 12, T - 14, 4);
+      r(x + 7, y + T - 18, T - 14, 4);
+    });
+    layer(TILE.SPRING, theme.grassLight, (tx, ty, x, y) => r(x + 2, y + T - 25, T - 4, 8));
+
+    // Crumbling blocks: cracked, and they shake once you have stepped on them
+    const shake = (tx, ty) => {
+      const c = crumbling && crumbling.get(tx + ',' + ty);
+      return c && !c.gone ? Math.sin(time * 70 + tx) * 1.5 : 0;
+    };
+    layer(TILE.CRUMBLE, theme.brickDark, (tx, ty, x, y) => r(x + shake(tx, ty), y, T, T));
+    layer(TILE.CRUMBLE, theme.brick, (tx, ty, x, y) => r(x + 2 + shake(tx, ty), y + 2, T - 4, T - 4));
+    layer(TILE.CRUMBLE, theme.dirtEdge, (tx, ty, x, y) => {
+      const s = shake(tx, ty);
+      r(x + 6 + s, y + 4, 3, 10);   // cracks
+      r(x + 5 + s, y + 14, 9, 3);
+      r(x + 19 + s, y + 8, 3, 12);
+      r(x + 14 + s, y + 20, 10, 3);
+    });
 
     // Spikes: three metal teeth per tile, shaded on the right half
     layer(TILE.SPIKES, theme.spikeBase, (tx, ty, x, y) => r(x, y + T - 4, T, 4));
