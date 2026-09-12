@@ -2,7 +2,7 @@
  * Screens: full-screen overlays drawn in view space on top of the world -
  * title, pause, level clear, game over and victory.
  */
-const CONTROLS_TEXT = '←/→ or A/D move   ·   Space/W jump (hold = higher)   ·   ↓ + Jump drop down   ·   P pause   ·   M mute';
+const CONTROLS_TEXT = '←/→ or A/D move   ·   Space/W jump (hold = higher)   ·   jump while sliding a wall = wall jump   ·   ↓ + Jump drop down   ·   P pause';
 
 const Screens = {
   title(ctx, game) {

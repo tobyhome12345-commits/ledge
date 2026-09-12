@@ -33,6 +33,7 @@ class World {
 
     // Let every map character with a spawn() create its entity.
     for (const s of this.level.spawns) s.spawn(this, s.tx, s.ty);
+    for (const s of levelData.signs || []) this.addItem(new Sign(s.x, s.y, s.text));
 
     this.demo = false;             // title-screen backdrop: scenery only, no player
     this.checkpoint = this.start;  // where the player respawns

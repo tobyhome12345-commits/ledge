@@ -170,3 +170,82 @@ class Goal {
     }
   }
 }
+
+/**
+ * Sign: a wooden signpost that shows a hint when the player comes near.
+ * Signs are listed per level in a `signs` array (tile units):
+ *   signs: [ { x: 6, y: 19, text: 'Move with the arrow keys' } ]
+ * Use \n in the text for extra lines.
+ */
+class Sign {
+  constructor(tx, ty, text) {
+    const T = CONFIG.TILE;
+    this.cx = tx * T + T / 2;
+    this.groundY = (ty + 1) * T;
+    this.x = tx * T;        // trigger box is only used for debug drawing
+    this.y = ty * T;
+    this.w = T;
+    this.h = T;
+    this.lines = String(text).split('\n');
+    this.show = 0;          // 0..1 fade of the hint bubble
+    this.removed = false;
+  }
+
+  update(dt, world) {
+    const p = world.player;
+    const near = Math.abs(p.x + p.w / 2 - this.cx) < 110 && Math.abs(p.y + p.h - this.groundY) < 120;
+    this.show = clamp(this.show + (near ? dt * 5 : -dt * 4), 0, 1);
+  }
+
+  onTouch() { /* signs are read, not collected */ }
+
+  draw(ctx, alpha, time) {
+    const { cx, groundY } = this;
+    // Post
+    ctx.fillStyle = '#7d5029';
+    ctx.fillRect(cx - 2.5, groundY - 20, 5, 20);
+    // Board
+    ctx.fillStyle = '#c99152';
+    ctx.beginPath();
+    roundRectPath(ctx, cx - 13, groundY - 36, 26, 18, 4);
+    ctx.fill();
+    ctx.fillStyle = '#e8b877';
+    ctx.fillRect(cx - 10, groundY - 33, 20, 2);
+    ctx.fillStyle = '#7d5029';
+    ctx.fillRect(cx - 9, groundY - 29, 18, 2);
+    ctx.fillRect(cx - 9, groundY - 25, 13, 2);
+
+    if (this.show <= 0.01) return;
+
+    // Hint bubble above the post
+    const pad = 10;
+    const lineH = 17;
+    ctx.font = `bold 14px ${HUD_FONT}`;
+    let width = 0;
+    for (const line of this.lines) width = Math.max(width, ctx.measureText(line).width);
+    const bw = width + pad * 2;
+    const bh = this.lines.length * lineH + pad * 2 - 4;
+    const bx = cx - bw / 2;
+    const by = groundY - 44 - bh + (1 - this.show) * 8;
+    ctx.globalAlpha = this.show;
+    ctx.fillStyle = 'rgba(22, 26, 48, 0.92)';
+    ctx.beginPath();
+    roundRectPath(ctx, bx, by, bw, bh, 8);
+    ctx.moveTo(cx - 6, by + bh - 1);
+    ctx.lineTo(cx, by + bh + 7);
+    ctx.lineTo(cx + 6, by + bh - 1);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 225, 122, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    roundRectPath(ctx, bx, by, bw, bh, 8);
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    this.lines.forEach((line, i) => ctx.fillText(line, cx, by + pad + lineH / 2 + i * lineH - 2));
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.globalAlpha = 1;
+  }
+}

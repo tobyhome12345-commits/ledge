@@ -20,6 +20,23 @@ const THEMES = {
     track: 'rgba(40, 60, 90, 0.22)',
   },
 
+  cavern: {
+    skyTop: '#0e111c', skyBottom: '#2b2242',
+    sun: '#7a63e0', sunGlow: 'rgba(122, 99, 224, 0.16)',   // a glowing crystal, not a sun
+    cloud: 'rgba(130, 118, 190, 0.28)',
+    far: '#241d3a', farPeak: '#443a66',
+    mid: '#1d1830',
+    near: '#171327',
+    dirt: '#4a4257', dirtDark: '#3b3446', dirtEdge: '#2a2533',
+    grass: '#6f5bd6', grassLight: '#a693f2',               // glowing moss instead of grass
+    brick: '#5a4f6e', brickLight: '#7e7196', brickDark: '#3e3550',
+    plank: '#8a6a4a', plankLight: '#b08b63', plankDark: '#5a442e',
+    spike: '#e7ebf2', spikeShade: '#a9b2c3', spikeBase: '#59606e',
+    cave: '#1b1726', caveDark: '#141020',
+    mover: '#6b6285', moverLight: '#9a90b8', moverDark: '#453e58',
+    track: 'rgba(180, 160, 255, 0.2)',
+  },
+
   dusk: {
     skyTop: '#3b2d6b', skyBottom: '#f59f7a',
     sun: '#ffd9a0', sunGlow: 'rgba(255, 190, 120, 0.25)',

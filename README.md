@@ -21,6 +21,15 @@ Gamepads work too (d-pad/stick to move, A/B to jump, Start to pause).
 
 URL options: `?level=2` starts on a given level, `?debug` opens with the debug overlay on.
 
+## Levels
+
+| # | Name | Theme | What it adds |
+| --- | --- | --- | --- |
+| 1-1 | First Steps | meadow | Tutorial - signposts teach one mechanic at a time |
+| 1-2 | Green Ledge | meadow | The full first level: ferry, elevator, hidden cave |
+| 1-3 | Dusk Heights | dusk | Wider gaps, spike rhythms, a long climb |
+| 1-4 | The Spire | cavern | Hardest: narrow ledges over a bottomless cavern |
+
 ## What's in it
 
 - **Movement that feels right**: acceleration and deceleration, coyote time (0.1s), jump
@@ -38,6 +47,7 @@ URL options: `?level=2` starts on a given level, `?debug` opens with the debug o
   checkpoint, running out of hearts costs a life, 50 coins earns one back.
 - **Feel and feedback**: squash and stretch, dust, particle bursts, screen shake, a camera with
   look-ahead and a vertical dead zone, parallax scenery, and procedural WebAudio sound effects.
+- **Signposts** that show a hint when you walk up to them, used by the tutorial level.
 
 ## Project layout
 
@@ -48,7 +58,7 @@ js/
   utils.js          small math/drawing helpers
   input.js          keyboard + gamepad -> named actions
   sfx.js            procedural sound effects
-  themes.js         colour palettes ('meadow', 'dusk')
+  themes.js         colour palettes ('meadow', 'dusk', 'cavern')
   level.js          tile ids, the map LEGEND, and the Level parser
   physics.js        AABB vs tile-grid collision
   camera.js         follow camera with easing, look-ahead, dead zone, shake
@@ -64,7 +74,7 @@ js/
   game.js           main loop and the game state machine
 levels/
   levels.js         the LEVELS registry
-  level1.js         "Green Ledge"
+  level1.js .. level4.js   the four levels, pure data
 tools/
   playtest-bot.js   robot player that checks a level can be finished
 ```
@@ -101,6 +111,7 @@ LEVELS.push({
   name: 'Dusk Heights',
   theme: 'dusk',                 // key in js/themes.js
   map: [ '.....', '..P..', '#####' ],
+  signs: [ { x: 6, y: 19, text: 'Hold jump to go higher' } ],  // hints on signposts
   movers: [ { x: 20, y: 12, w: 3, dx: 6, dy: 0, period: 4 } ],
 });
 ```
